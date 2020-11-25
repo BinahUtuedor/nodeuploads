@@ -1,6 +1,6 @@
 const express = require('express');
 const multer = require('multer');
-const eje = require('ejs');
+const ejs = require('ejs');
 const path = require('path');
 
 // Set storage engine
@@ -13,9 +13,29 @@ const storage = multer.diskStorage({
 });
 
 // Init upload
-upload = multer({
-    storage: storage
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 1000000 },
+    fileFilter: function(req, file, cb) {
+        checkFileType(file, cb);
+    }
 }).single('myImage');
+
+// Check File Type
+function checkFileType(file, cb) {
+    // Allowed exts
+    const filetypes = /jpeg|jpg|png|gif/;
+    // Check ext
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    // Check mime
+    const mimetype = filetypes.test(file.mimetype);
+
+    if(mimetype && extname) {
+        return cb(null, true);
+    } else {
+        cb('Error: Images Only!');
+    }
+}
 
 // Init app
 const app = express();
@@ -35,8 +55,16 @@ app.post('/upload', (req, res) =>{
                 msg: err
             })
         } else {
-            console.log(req.file);
-            res.send('test')
+            if(req.file == undefined) {
+                res.render('index', {
+                    msg: 'Error: No file selected!'
+                });
+            } else {
+                res.render('index', {
+                    msg: 'File Uploaded!',
+                    file: `uploads/${req.file.filename}`
+                })
+            }
         }
     });
 });
